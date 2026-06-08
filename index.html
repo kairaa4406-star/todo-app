@@ -15,26 +15,34 @@ h1 { text-align: center; font-size: 22px; font-weight: 600; margin-bottom: 4px; 
 .stat-num { font-size: 20px; font-weight: 600; }
 .stat-label { font-size: 11px; margin-top: 3px; }
 .input-row { display: flex; gap: 8px; margin-bottom: 8px; }
-.input-row input { flex: 1; padding: 10px 14px; border-radius: 10px; border: 1px solid #ddd; font-size: 15px; outline: none; }
-.input-row input:focus { border-color: #7F77DD; box-shadow: 0 0 0 2px #7F77DD22; }
-.cat-row { display: flex; gap: 8px; margin-bottom: 1.25rem; }
-select { flex: 1; padding: 9px 12px; border-radius: 10px; border: 1px solid #ddd; font-size: 14px; cursor: pointer; background: #fff; }
-.add-btn { padding: 10px 18px; background: #7F77DD; color: #fff; border: none; border-radius: 10px; font-size: 15px; cursor: pointer; font-weight: 500; }
+.input-row input[type=text] { flex: 1; padding: 10px 14px; border-radius: 10px; border: 1px solid #ddd; font-size: 15px; outline: none; }
+.input-row input[type=text]:focus { border-color: #7F77DD; box-shadow: 0 0 0 2px #7F77DD22; }
+.select-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.date-row { display: flex; gap: 8px; margin-bottom: 1.25rem; align-items: center; }
+.date-row label { font-size: 13px; color: #888; white-space: nowrap; }
+.date-row input[type=date] { flex: 1; padding: 9px 12px; border-radius: 10px; border: 1px solid #ddd; font-size: 14px; outline: none; background: #fff; color: #333; }
+.date-row input[type=date]:focus { border-color: #7F77DD; }
+select { flex: 1; min-width: 100px; padding: 9px 12px; border-radius: 10px; border: 1px solid #ddd; font-size: 14px; cursor: pointer; background: #fff; }
+.add-btn { padding: 10px 18px; background: #7F77DD; color: #fff; border: none; border-radius: 10px; font-size: 15px; cursor: pointer; font-weight: 500; white-space: nowrap; }
 .add-btn:hover { background: #534AB7; }
-.tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.section-label { font-size: 12px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; margin-top: 10px; }
+.tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
 .tab { padding: 6px 14px; border-radius: 20px; font-size: 13px; cursor: pointer; border: 1px solid #ddd; background: #f5f5f5; color: #666; }
 .tab.active { background: #7F77DD; color: #fff; border-color: #7F77DD; }
-.filter-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1rem; }
+.filter-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
 .fbtn { padding: 5px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid #ddd; background: #f5f5f5; color: #666; }
-.task-list { display: flex; flex-direction: column; gap: 8px; }
-.task-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; border: 1px solid #eee; background: #fff; }
-.task-card.done { opacity: 0.55; }
-.check-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; background: transparent; }
-.task-body { flex: 1; }
-.task-text { font-size: 15px; color: #222; }
+.task-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.task-card { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 12px; border: 1px solid #eee; background: #fff; }
+.task-card.done { opacity: 0.5; }
+.task-card.overdue { background: #fff8f8; }
+.check-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; background: transparent; margin-top: 2px; }
+.task-body { flex: 1; min-width: 0; }
+.task-text { font-size: 15px; color: #222; word-break: break-word; }
 .task-text.done { text-decoration: line-through; color: #aaa; }
-.cat-badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-top: 4px; font-weight: 500; }
-.del-btn { background: none; border: none; cursor: pointer; color: #bbb; font-size: 18px; padding: 4px; border-radius: 8px; }
+.badges { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; align-items: center; }
+.badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+.due-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+.del-btn { background: none; border: none; cursor: pointer; color: #bbb; font-size: 18px; padding: 4px; border-radius: 8px; flex-shrink: 0; }
 .del-btn:hover { color: #E24B4A; background: #FCEBEB; }
 .empty { text-align: center; padding: 2rem; color: #bbb; font-size: 14px; }
 </style>
@@ -42,16 +50,19 @@ select { flex: 1; padding: 9px 12px; border-radius: 10px; border: 1px solid #ddd
 <body>
 <div class="app">
   <h1>📝 My To-Do List</h1>
-  <p class="subtitle">Organized by category!</p>
+  <p class="subtitle">Categories, Priorities & Due Dates!</p>
+
   <div class="stats">
     <div class="stat" style="background:#EEEDFE;color:#3C3489;"><div class="stat-num" id="s-total">0</div><div class="stat-label" style="color:#534AB7;">Total</div></div>
     <div class="stat" style="background:#EAF3DE;color:#27500A;"><div class="stat-num" id="s-done">0</div><div class="stat-label" style="color:#3B6D11;">Done</div></div>
     <div class="stat" style="background:#FAECE7;color:#712B13;"><div class="stat-num" id="s-left">0</div><div class="stat-label" style="color:#993C1D;">Remaining</div></div>
+    <div class="stat" style="background:#FCEBEB;color:#7C1111;"><div class="stat-num" id="s-overdue">0</div><div class="stat-label" style="color:#E24B4A;">Overdue</div></div>
   </div>
+
   <div class="input-row">
     <input type="text" id="taskInput" placeholder="Add a new task..." />
   </div>
-  <div class="cat-row">
+  <div class="select-row">
     <select id="catSelect">
       <option value="Personal">🙂 Personal</option>
       <option value="Work">💼 Work</option>
@@ -59,16 +70,35 @@ select { flex: 1; padding: 9px 12px; border-radius: 10px; border: 1px solid #ddd
       <option value="Health">💪 Health</option>
       <option value="Learning">📚 Learning</option>
     </select>
+    <select id="prioSelect">
+      <option value="High">🔴 High</option>
+      <option value="Medium">🟡 Medium</option>
+      <option value="Low">🟢 Low</option>
+    </select>
+  </div>
+  <div class="date-row">
+    <label>📅 Due date:</label>
+    <input type="date" id="dateInput" />
     <button class="add-btn" onclick="addTask()">+ Add</button>
   </div>
+
+  <div class="section-label">Status</div>
   <div class="tabs">
     <button class="tab active" onclick="setStatus('all',this)">All</button>
     <button class="tab" onclick="setStatus('active',this)">Active</button>
     <button class="tab" onclick="setStatus('done',this)">Completed</button>
+    <button class="tab" onclick="setStatus('overdue',this)">⚠️ Overdue</button>
   </div>
-  <div class="filter-row" id="filterRow"></div>
+
+  <div class="section-label">Category</div>
+  <div class="filter-row" id="catFilter"></div>
+
+  <div class="section-label">Priority</div>
+  <div class="filter-row" id="prioFilter"></div>
+
   <div class="task-list" id="taskList"></div>
 </div>
+
 <script>
 const CATS = {
   Personal:{ color:'#7F77DD', bg:'#EEEDFE', text:'#3C3489', icon:'🙂' },
@@ -77,47 +107,116 @@ const CATS = {
   Health:  { color:'#D4537E', bg:'#FBEAF0', text:'#72243E', icon:'💪' },
   Learning:{ color:'#BA7517', bg:'#FAEEDA', text:'#633806', icon:'📚' },
 };
-let tasks=[], statusFilter='all', catFilter='all';
-function load(){ try{ const s=localStorage.getItem('todo_cats_v1'); if(s) tasks=JSON.parse(s); }catch(e){} }
-function save(){ try{ localStorage.setItem('todo_cats_v1', JSON.stringify(tasks)); }catch(e){} }
+const PRIOS = {
+  High:   { color:'#E24B4A', bg:'#FCEBEB', text:'#7C1111', icon:'🔴', order:1 },
+  Medium: { color:'#D4900A', bg:'#FEF3DA', text:'#6B4300', icon:'🟡', order:2 },
+  Low:    { color:'#1D9E75', bg:'#E1F5EE', text:'#085041', icon:'🟢', order:3 },
+};
+
+let tasks=[], statusFilter='all', catFilter='all', prioFilter='all';
+
+function load(){ try{ const s=localStorage.getItem('todo_v4'); if(s) tasks=JSON.parse(s); }catch(e){} }
+function save(){ try{ localStorage.setItem('todo_v4', JSON.stringify(tasks)); }catch(e){} }
+
+function today(){ return new Date().toISOString().split('T')[0]; }
+
+function isOverdue(t){
+  if(t.done || !t.due) return false;
+  return t.due < today();
+}
+
+function formatDue(due){
+  if(!due) return null;
+  const td = today();
+  if(due === td) return { label:'Today', color:'#D4900A', bg:'#FEF3DA', text:'#6B4300' };
+  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
+  const tmStr = tomorrow.toISOString().split('T')[0];
+  if(due === tmStr) return { label:'Tomorrow', color:'#378ADD', bg:'#E6F1FB', text:'#0C447C' };
+  if(due < td) {
+    const days = Math.round((new Date(td)-new Date(due))/(1000*60*60*24));
+    return { label:`${days}d overdue`, color:'#E24B4A', bg:'#FCEBEB', text:'#7C1111' };
+  }
+  const days = Math.round((new Date(due)-new Date(td))/(1000*60*60*24));
+  if(days <= 7) return { label:`In ${days} days`, color:'#1D9E75', bg:'#E1F5EE', text:'#085041' };
+  // format as readable date
+  const d = new Date(due+'T00:00:00');
+  const label = d.toLocaleDateString('en', {month:'short', day:'numeric'});
+  return { label, color:'#888', bg:'#f0f0f0', text:'#444' };
+}
+
 function addTask(){
   const inp=document.getElementById('taskInput');
   const text=inp.value.trim(); if(!text) return;
   const cat=document.getElementById('catSelect').value;
-  tasks.unshift({id:Date.now(), text, done:false, cat});
+  const prio=document.getElementById('prioSelect').value;
+  const due=document.getElementById('dateInput').value || null;
+  tasks.unshift({id:Date.now(), text, done:false, cat, prio, due});
   save(); inp.value=''; render();
 }
+
 function toggle(id){ const t=tasks.find(t=>t.id===id); if(t){t.done=!t.done; save(); render();} }
 function del(id){ tasks=tasks.filter(t=>t.id!==id); save(); render(); }
 function setStatus(s,el){ statusFilter=s; document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); render(); }
 function setCat(c){ catFilter=c; render(); }
+function setPrio(p){ prioFilter=p; render(); }
+
 function render(){
   const usedCats=[...new Set(tasks.map(t=>t.cat))];
-  let fr=`<button class="fbtn" style="${catFilter==='all'?'background:#7F77DD;color:#fff;border-color:#7F77DD;':''}" onclick="setCat('all')">All</button>`;
-  usedCats.forEach(c=>{ const cat=CATS[c]; fr+=`<button class="fbtn" style="${catFilter===c?`background:${cat.color};color:#fff;border-color:${cat.color};`:''}" onclick="setCat('${c}')">${cat.icon} ${c}</button>`; });
-  document.getElementById('filterRow').innerHTML=fr;
+  let cf=`<button class="fbtn" style="${catFilter==='all'?'background:#7F77DD;color:#fff;border-color:#7F77DD;':''}" onclick="setCat('all')">All</button>`;
+  usedCats.forEach(c=>{ const cat=CATS[c]; cf+=`<button class="fbtn" style="${catFilter===c?`background:${cat.color};color:#fff;border-color:${cat.color};`:''}" onclick="setCat('${c}')">${cat.icon} ${c}</button>`; });
+  document.getElementById('catFilter').innerHTML=cf;
+
+  let pf=`<button class="fbtn" style="${prioFilter==='all'?'background:#7F77DD;color:#fff;border-color:#7F77DD;':''}" onclick="setPrio('all')">All</button>`;
+  ['High','Medium','Low'].forEach(p=>{ const pr=PRIOS[p]; pf+=`<button class="fbtn" style="${prioFilter===p?`background:${pr.color};color:#fff;border-color:${pr.color};`:''}" onclick="setPrio('${p}')">${pr.icon} ${p}</button>`; });
+  document.getElementById('prioFilter').innerHTML=pf;
+
   let f=tasks;
   if(statusFilter==='active') f=f.filter(t=>!t.done);
   if(statusFilter==='done') f=f.filter(t=>t.done);
+  if(statusFilter==='overdue') f=f.filter(t=>isOverdue(t));
   if(catFilter!=='all') f=f.filter(t=>t.cat===catFilter);
+  if(prioFilter!=='all') f=f.filter(t=>t.prio===prioFilter);
+
+  f=[...f].sort((a,b)=>{
+    if(a.done!==b.done) return a.done?1:-1;
+    const aOver=isOverdue(a)?0:1, bOver=isOverdue(b)?0:1;
+    if(aOver!==bOver) return aOver-bOver;
+    return (PRIOS[a.prio]?.order||3)-(PRIOS[b.prio]?.order||3);
+  });
+
   const list=document.getElementById('taskList');
-  if(!f.length){ list.innerHTML=`<div class="empty">😊 No tasks here!</div>`; }
-  else list.innerHTML=f.map(t=>{ const cat=CATS[t.cat]||CATS.Personal; return `
-    <div class="task-card ${t.done?'done':''}" style="border-left:3px solid ${cat.color};">
+  if(!f.length){ list.innerHTML=`<div class="empty">😊 No tasks here!</div>`; return; }
+
+  list.innerHTML=f.map(t=>{
+    const cat=CATS[t.cat]||CATS.Personal;
+    const pr=PRIOS[t.prio]||PRIOS.Medium;
+    const due=formatDue(t.due);
+    const overdue=isOverdue(t);
+    return `
+    <div class="task-card ${t.done?'done':''} ${overdue?'overdue':''}" style="border-left:3px solid ${overdue?'#E24B4A':pr.color};">
       <button class="check-btn" onclick="toggle(${t.id})" style="border-color:${cat.color};color:${t.done?'#fff':cat.color};background:${t.done?cat.color:'transparent'};">
         ${t.done?'✓':''}
       </button>
       <div class="task-body">
         <div class="task-text ${t.done?'done':''}">${t.text}</div>
-        <span class="cat-badge" style="background:${cat.bg};color:${cat.text};">${cat.icon} ${t.cat}</span>
+        <div class="badges">
+          <span class="badge" style="background:${cat.bg};color:${cat.text};">${cat.icon} ${t.cat}</span>
+          <span class="badge" style="background:${pr.bg};color:${pr.text};">${pr.icon} ${t.prio}</span>
+          ${due ? `<span class="due-badge" style="background:${due.bg};color:${due.text};">📅 ${due.label}</span>` : ''}
+        </div>
       </div>
       <button class="del-btn" onclick="del(${t.id})">🗑</button>
-    </div>`; }).join('');
+    </div>`;
+  }).join('');
+
   const done=tasks.filter(t=>t.done).length;
+  const overdue=tasks.filter(t=>isOverdue(t)).length;
   document.getElementById('s-total').textContent=tasks.length;
   document.getElementById('s-done').textContent=done;
   document.getElementById('s-left').textContent=tasks.length-done;
+  document.getElementById('s-overdue').textContent=overdue;
 }
+
 document.getElementById('taskInput').addEventListener('keydown',e=>{ if(e.key==='Enter') addTask(); });
 load(); render();
 </script>
