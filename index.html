@@ -58,6 +58,19 @@ select { flex: 1; min-width: 100px; padding: 9px 12px; border-radius: 10px; bord
     <div class="stat" style="background:#FAECE7;color:#712B13;"><div class="stat-num" id="s-left">0</div><div class="stat-label" style="color:#993C1D;">Remaining</div></div>
     <div class="stat" style="background:#FCEBEB;color:#7C1111;"><div class="stat-num" id="s-overdue">0</div><div class="stat-label" style="color:#E24B4A;">Overdue</div></div>
   </div>
+<div class="section-label">Quick Add ✨</div>
+
+<div class="input-row">
+  <input
+    type="text"
+    id="quickInput"
+    placeholder="Buy milk tomorrow urgent"
+  />
+  <button class="add-btn" onclick="parseQuickAdd()">
+    Auto Fill
+  </button>
+</div>
+  
 
   <div class="input-row">
     <input type="text" id="taskInput" placeholder="Add a new task..." />
@@ -82,6 +95,7 @@ select { flex: 1; min-width: 100px; padding: 9px 12px; border-radius: 10px; bord
   <option value="newest">🆕 Newest</option>
   <option value="oldest">📜 Oldest</option>
 </select>
+    
     
   </div>
   <div class="date-row">
@@ -131,6 +145,73 @@ function today(){ return new Date().toISOString().split('T')[0]; }
 function isOverdue(t){
   if(t.done || !t.due) return false;
   return t.due < today();
+}
+  function parseQuickAdd(){
+
+  const input = document.getElementById("quickInput");
+  let text = input.value.trim();
+
+  if(!text) return;
+
+  let category = "Personal";
+  let priority = "Medium";
+  let due = "";
+
+  const lower = text.toLowerCase();
+
+  // Priority
+  if(lower.includes("urgent")){
+    priority = "High";
+  }
+
+  // Category
+  if(
+    lower.includes("buy") ||
+    lower.includes("shop") ||
+    lower.includes("al") ||
+    lower.includes("market")
+  ){
+    category = "Shopping";
+  }
+
+  if(
+    lower.includes("study") ||
+    lower.includes("homework") ||
+        lower.includes("çalış") ||
+    lower.includes("öğren") ||
+    lower.includes("learn")
+  ){
+    category = "Learning";
+  }
+
+  // Due date
+  if(lower.includes("tomorrow")){
+    const d = new Date();
+    d.setDate(d.getDate()+1);
+    due = d.toISOString().split("T")[0];
+  }
+
+  if(lower.includes("today")){
+    due = new Date().toISOString().split("T")[0];
+  }
+
+  // Temizlik
+  text = text
+    .replace(/urgent/gi,"")
+    .replace(/tomorrow/gi,"")
+    .replace(/today/gi,"")
+    .trim();
+
+  // Alanları doldur
+  document.getElementById("taskInput").value = text;
+  document.getElementById("catSelect").value = category;
+  document.getElementById("prioSelect").value = priority;
+
+  if(due){
+    document.getElementById("dateInput").value = due;
+  }
+
+  input.value = "";
 }
 
 function formatDue(due){
