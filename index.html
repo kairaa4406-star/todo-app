@@ -75,6 +75,14 @@ select { flex: 1; min-width: 100px; padding: 9px 12px; border-radius: 10px; bord
       <option value="Medium">🟡 Medium</option>
       <option value="Low">🟢 Low</option>
     </select>
+    
+<select id="sortSelect">
+  <option value="priority">🔥 Priority</option>
+  <option value="date">📅 Due Date</option>
+  <option value="newest">🆕 Newest</option>
+  <option value="oldest">📜 Oldest</option>
+</select>
+    
   </div>
   <div class="date-row">
     <label>📅 Due date:</label>
@@ -216,7 +224,12 @@ function render(){
   document.getElementById('s-left').textContent=tasks.length-done;
   document.getElementById('s-overdue').textContent=overdue;
 }
-
+let sortMode = 'priority';
+  function setSort(mode){
+  sortMode = mode;
+  render();
+}
+  
 document.getElementById('taskInput').addEventListener('keydown',e=>{ if(e.key==='Enter') addTask(); });
 load(); render();
 </script>
