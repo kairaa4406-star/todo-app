@@ -158,32 +158,168 @@ function isOverdue(t){
   let due = "";
 
   const lower = text.toLowerCase();
+   const months = {
+  "ocak":"01",
+  "şubat":"02",
+  "mart":"03",
+  "nisan":"04",
+  "mayıs":"05",
+  "haziran":"06",
+  "temmuz":"07",
+  "ağustos":"08",
+  "eylül":"09",
+  "ekim":"10",
+  "kasım":"11",
+  "aralık":"12"
+};
+
+for(const month in months){
+
+  if(lower.includes(month)){
+
+    const regex = new RegExp(`(\\d{1,2})\\s*${month}`);
+
+    const match = lower.match(regex);
+
+    if(match){
+
+      const day = match[1].padStart(2,"0");
+
+      due = `${new Date().getFullYear()}-${months[month]}-${day}`;
+
+      break;
+    }
+  }
+}
 
   // Priority
-  if(lower.includes("urgent")){
-    priority = "High";
+{
+   const highPriorityWords = [
+  "urgent",
+  "important",
+  "asap",
+  "critical",
+  "acil",
+  "önemli",
+  "hemen",
+  "zorunlu",
+  "deadline",
+  "son tarih"
+];
+
+if(
+  highPriorityWords.some(word => lower.includes(word))
+){
+  priority = "High";
+}
   }
 
   // Category
-  if(
-    lower.includes("buy") ||
-    lower.includes("shop") ||
-    lower.includes("al") ||
-    lower.includes("market")
-  ){
-    category = "Shopping";
-  }
+  const shoppingWords = [
+  "buy",
+  "shop",
+  "market",
+  "al",
+  "alışveriş",
+  "sipariş",
+  "migros",
+  "a101",
+  "bim",
+  "şok",
+  "ekmek",
+  "süt"
+];
 
-  if(
-    lower.includes("study") ||
-    lower.includes("homework") ||
-        lower.includes("çalış") ||
-    lower.includes("öğren") ||
-    lower.includes("learn")
-  ){
-    category = "Learning";
-  }
+if (
+  shoppingWords.some(word => lower.includes(word))
+){
+  category = "Shopping";
+}
+ const learningWords = [
+  "study",
+  "homework",
+  "learn",
+  "course",
+  "lesson",
+  "lecture",
+  "project",
+  "exam",
+  "school",
+  "university",
+  "çalış",
+  "öğren",
+  "ders",
+  "ödev",
+  "sınav",
+  "okul",
+  "kurs",
+  "proje",
+  "yazılım",
+  "kodla"
+];
 
+if(
+  learningWords.some(word => lower.includes(word))
+){
+  category = "Learning";
+}
+    const healthWords = [
+  "gym",
+  "exercise",
+  "workout",
+  "doctor",
+  "hospital",
+  "medicine",
+  "walk",
+  "run",
+  "fitness",
+  "diet",
+  "spor",
+  "egzersiz",
+  "yürüyüş",
+  "koşu",
+  "hastane",
+  "doktor",
+  "ilaç",
+  "diyet",
+  "sağlık",
+  "judo"
+];
+
+if(
+  healthWords.some(word => lower.includes(word))
+){
+  category = "Health";
+}
+const workWords = [
+  "meeting",
+  "client",
+  "email",
+  "report",
+  "office",
+  "job",
+  "work",
+  "presentation",
+  "business",
+  "invoice",
+  "iş",
+  "müşteri",
+  "toplantı",
+  "sunum",
+  "rapor",
+  "mağaza",
+  "dükkan",
+  "fatura",
+  "ofis",
+  "proje"
+];
+
+if(
+  workWords.some(word => lower.includes(word))
+){
+  category = "Work";
+}
+    
   // Due date
   if(lower.includes("tomorrow")){
     const d = new Date();
@@ -196,6 +332,21 @@ function isOverdue(t){
   }
 
   // Temizlik
+    text = text.replace(/\d{1,2}\s+[a-zçğıöşü]+/gi, "");
+    
+    .replace(/\d{1,2}\s+ocak/gi,"")
+.replace(/\d{1,2}\s+şubat/gi,"")
+.replace(/\d{1,2}\s+mart/gi,"")
+.replace(/\d{1,2}\s+nisan/gi,"")
+.replace(/\d{1,2}\s+mayıs/gi,"")
+.replace(/\d{1,2}\s+haziran/gi,"")
+.replace(/\d{1,2}\s+temmuz/gi,"")
+.replace(/\d{1,2}\s+ağustos/gi,"")
+.replace(/\d{1,2}\s+eylül/gi,"")
+.replace(/\d{1,2}\s+ekim/gi,"")
+.replace(/\d{1,2}\s+kasım/gi,"")
+.replace(/\d{1,2}\s+aralık/gi,"")
+    
   text = text
     .replace(/urgent/gi,"")
     .replace(/tomorrow/gi,"")
