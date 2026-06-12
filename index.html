@@ -193,7 +193,7 @@ for(const month in months){
 }
 
   // Priority
-{
+
    const highPriorityWords = [
   "urgent",
   "important",
@@ -212,7 +212,7 @@ if(
 ){
   priority = "High";
 }
-  }
+  
 
   // Category
   const shoppingWords = [
@@ -301,14 +301,11 @@ const workWords = [
   "work",
   "presentation",
   "business",
-  "invoice",
+  "iş görüşmesi",
   "iş",
   "müşteri",
   "toplantı",
-  "sunum",
   "rapor",
-  "mağaza",
-  "dükkan",
   "fatura",
   "ofis",
   "proje"
@@ -330,23 +327,31 @@ if(
   if(lower.includes("today")){
     due = new Date().toISOString().split("T")[0];
   }
+    const monthMap = {
+  ocak:0,
+  şubat:1,
+  subat:1,
+  mart:2,
+  nisan:3,
+  mayıs:4,
+  mayis:4,
+  haziran:5,
+  temmuz:6,
+  ağustos:7,
+  agustos:7,
+  eylül:8,
+  eylul:8,
+  ekim:9,
+  kasım:10,
+  kasim:10,
+  aralık:11,
+  aralik:11
+};
 
   // Temizlik
     text = text.replace(/\d{1,2}\s+[a-zçğıöşü]+/gi, "");
     
-    .replace(/\d{1,2}\s+ocak/gi,"")
-.replace(/\d{1,2}\s+şubat/gi,"")
-.replace(/\d{1,2}\s+mart/gi,"")
-.replace(/\d{1,2}\s+nisan/gi,"")
-.replace(/\d{1,2}\s+mayıs/gi,"")
-.replace(/\d{1,2}\s+haziran/gi,"")
-.replace(/\d{1,2}\s+temmuz/gi,"")
-.replace(/\d{1,2}\s+ağustos/gi,"")
-.replace(/\d{1,2}\s+eylül/gi,"")
-.replace(/\d{1,2}\s+ekim/gi,"")
-.replace(/\d{1,2}\s+kasım/gi,"")
-.replace(/\d{1,2}\s+aralık/gi,"")
-    
+
   text = text
     .replace(/urgent/gi,"")
     .replace(/tomorrow/gi,"")
