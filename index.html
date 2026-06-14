@@ -58,19 +58,12 @@ select { flex: 1; min-width: 100px; padding: 9px 12px; border-radius: 10px; bord
     <div class="stat" style="background:#FAECE7;color:#712B13;"><div class="stat-num" id="s-left">0</div><div class="stat-label" style="color:#993C1D;">Remaining</div></div>
     <div class="stat" style="background:#FCEBEB;color:#7C1111;"><div class="stat-num" id="s-overdue">0</div><div class="stat-label" style="color:#E24B4A;">Overdue</div></div>
   </div>
-<div class="section-label">Quick Add ✨</div>
 
-<div class="input-row">
-  <input
-    type="text"
-    id="quickInput"
-    placeholder="Buy milk tomorrow urgent"
-  />
-  <button class="add-btn" onclick="parseQuickAdd()">
-    Auto Fill
-  </button>
-</div>
-  
+  <div class="section-label">Quick Add ✨</div>
+  <div class="input-row">
+    <input type="text" id="quickInput" placeholder="Buy milk tomorrow urgent" />
+    <button class="add-btn" onclick="parseQuickAdd()">Auto Fill</button>
+  </div>
 
   <div class="input-row">
     <input type="text" id="taskInput" placeholder="Add a new task..." />
@@ -88,15 +81,12 @@ select { flex: 1; min-width: 100px; padding: 9px 12px; border-radius: 10px; bord
       <option value="Medium">🟡 Medium</option>
       <option value="Low">🟢 Low</option>
     </select>
-    
-<select id="sortSelect">
-  <option value="priority">🔥 Priority</option>
-  <option value="date">📅 Due Date</option>
-  <option value="newest">🆕 Newest</option>
-  <option value="oldest">📜 Oldest</option>
-</select>
-    
-    
+    <select id="sortSelect">
+      <option value="priority">🔥 Priority</option>
+      <option value="date">📅 Due Date</option>
+      <option value="newest">🆕 Newest</option>
+      <option value="oldest">📜 Oldest</option>
+    </select>
   </div>
   <div class="date-row">
     <label>📅 Due date:</label>
@@ -135,9 +125,16 @@ const PRIOS = {
   Low:    { color:'#1D9E75', bg:'#E1F5EE', text:'#085041', icon:'🟢', order:3 },
 };
 
-let tasks=[], statusFilter='all', catFilter='all', prioFilter='all';
+let tasks=[], statusFilter='all', catFilter='all', prioFilter='all', sortMode='priority';
 
-function load(){ try{ const s=localStorage.getItem('todo_v4'); if(s) tasks=JSON.parse(s); }catch(e){} }
+function load(){
+  try{
+    const s=localStorage.getItem('todo_v4');
+    if(s) tasks=JSON.parse(s);
+    // migrate old tasks without createdAt
+    tasks=tasks.map(t=>({ createdAt: t.id, ...t }));
+  }catch(e){}
+}
 function save(){ try{ localStorage.setItem('todo_v4', JSON.stringify(tasks)); }catch(e){} }
 
 function today(){ return new Date().toISOString().split('T')[0]; }
@@ -146,247 +143,396 @@ function isOverdue(t){
   if(t.done || !t.due) return false;
   return t.due < today();
 }
-  function parseQuickAdd(){
 
-  const input = document.getElementById("quickInput");
-  let text = input.value.trim();
+// ═══════════════════════════════════════════════════════════════════════════
+// QUICK ADD PARSER  v3.0
+// Architecture: each concern is its own pure function.
+// To extend (reminders, location, recurrence…) add a new detect* function
+// and call it inside parseQuickAdd() — nothing else needs to change.
+// ═══════════════════════════════════════════════════════════════════════════
 
-  if(!text) return;
+// ── Shared data dictionaries ─────────────────────────────────────────────────
 
-  let category = "Personal";
-  let priority = "Medium";
-  let due = "";
+const QA = {
 
-  const lower = text.toLowerCase();
-   const months = {
-  "ocak":"01",
-  "şubat":"02",
-  "mart":"03",
-  "nisan":"04",
-  "mayıs":"05",
-  "haziran":"06",
-  "temmuz":"07",
-  "ağustos":"08",
-  "eylül":"09",
-  "ekim":"10",
-  "kasım":"11",
-  "aralık":"12"
+  // Priority signal words (EN + TR)
+  PRIORITY: {
+    High:   ["urgent","important","asap","critical","deadline",
+             "acil","önemli","hemen","zorunlu","son tarih","kritik"],
+    Low:    ["someday","whenever","low priority","düşük öncelik","zamanında"],
+    // Medium is the default — no keywords needed
+  },
+
+  // Category signal words (EN + TR). Order matters: last match wins,
+  // so put more-specific categories after general ones.
+  CATEGORY: {
+    Shopping: ["buy","shop","purchase","order","grocery","market",
+               "al","satın","alışveriş","sipariş","migros","a101","bim","şok",
+               "ekmek","süt","meyve","sebze"],
+    Learning: ["study","learn","homework","course","lesson","lecture",
+               "exam","university","college","read book","tutorial",
+               "çalış","öğren","ders","ödev","sınav","okul","kurs",
+               "yazılım","kodla","kitap oku"],
+    Health:   ["gym","exercise","workout","doctor","hospital","medicine",
+               "pharmacy","dentist","diet","run","walk","yoga","therapy",
+               "spor","egzersiz","yürüyüş","koşu","hastane","doktor",
+               "eczane","diş","ilaç","diyet","sağlık","judo","pilates"],
+    Work:     ["meeting","client","email","report","office","job","work",
+               "presentation","invoice","deadline","contract","call",
+               "iş","müşteri","toplantı","rapor","fatura","ofis","sunum",
+               "sözleşme","görüşme","proje teslim"],
+    Personal: [], // fallback — always matches last
+  },
+
+  // English month name → 0-based month index
+  EN_MONTHS: {
+    january:0, february:1, march:2,    april:3,
+    may:4,     june:5,     july:6,     august:7,
+    september:8, october:9, november:10, december:11,
+  },
+
+  // Turkish month STEM → 0-based month index.
+  // We strip suffixes via normalizeTR() so we only need base stems here.
+  TR_MONTHS: {
+    ocak:0, şubat:1, mart:2,    nisan:3,
+    mayıs:4, haziran:5, temmuz:6, ağustos:7,
+    eylül:8, ekim:9,  kasım:10,  aralık:11,
+  },
+
+  // English weekday name → JS .getDay() index (0 = Sunday)
+  EN_DAYS: {
+    sunday:0, monday:1, tuesday:2, wednesday:3,
+    thursday:4, friday:5, saturday:6,
+  },
+
+  // Turkish weekday STEM → JS .getDay() index.
+  // Suffixes stripped by normalizeTR().
+  TR_DAYS: {
+    pazar:0, pazartesi:1, salı:2, çarşamba:3,
+    perşembe:4, cuma:5, cumartesi:6,
+  },
+
+  // Turkish suffix patterns to strip before dictionary lookup.
+  // Order: longest first so "nda" isn't consumed before "unda".
+  // Longest alternatives first — greedy alternation picks the right suffix.
+  // Covers: ablative (dan/den/tan/ten), locative (nda/nde/nta/da/de/ta/te),
+  // genitive (nın/nin/nun/nün/ın/in/un/ün), dative+buffer (na/ne/ya/ye/a/e),
+  // accusative+buffer (nı/ni/nu/nü/yı/yi/ı/i/u/ü).
+  // Single-vowel endings MUST stay last — they are the shortest fallback.
+  TR_SUFFIXES: /(?:ndan|nden|nın|nin|nun|nün|dan|den|tan|ten|nda|nde|nta|nte|na|ne|nı|ni|nu|nü|ya|ye|yı|yi|yu|yü|da|de|ta|te|ın|in|un|ün|a|e|ı|i|u|ü)$/i,
 };
 
-for(const month in months){
+// ── Utility helpers ──────────────────────────────────────────────────────────
 
-  if(lower.includes(month)){
+/**
+ * fmt(date) → "YYYY-MM-DD"
+ * Always use local midnight to avoid timezone shifts.
+ */
+function qaFmt(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const day = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${day}`;
+}
 
-    const regex = new RegExp(`(\\d{1,2})\\s*${month}`);
+/**
+ * relativeDate(offsetDays) → "YYYY-MM-DD"
+ */
+function qaRelDate(offset){
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return qaFmt(d);
+}
 
-    const match = lower.match(regex);
+/**
+ * nextWeekday(targetIndex) → "YYYY-MM-DD"
+ * Always returns a future date (minimum +1 day).
+ */
+function qaNextWeekday(target){
+  const d = new Date();
+  const diff = (target - d.getDay() + 7) % 7 || 7;
+  d.setDate(d.getDate() + diff);
+  return qaFmt(d);
+}
 
-    if(match){
+/**
+ * normalizeTR(word) → stem without Turkish vowel-harmony suffixes.
+ * Example: "haziranda" → "haziran", "pazartesiye" → "pazartesi"
+ * This lets the dictionaries store only base forms.
+ */
+function normalizeTR(word){
+  // Build a flat set of all known TR stems (months + weekdays) for validation.
+  // We only accept a stripped form if it lands on a known stem — this prevents
+  // over-stripping words like "haziran" (ends in "an") or "nisan" (ends in "an").
+  const knownStems = new Set([
+    ...Object.keys(QA.TR_MONTHS),
+    ...Object.keys(QA.TR_DAYS),
+  ]);
 
-      const day = match[1].padStart(2,"0");
+  const w = word.toLowerCase();
 
-      due = `${new Date().getFullYear()}-${months[month]}-${day}`;
+  // Fast-path: already a known stem (e.g. "haziran", "temmuz")
+  if(knownStems.has(w)) return w;
 
-      break;
+  // Try stripping one suffix layer at a time (up to 4 for compound suffixes).
+  // Accept the result only when it matches a known stem; otherwise keep going.
+  let current = w;
+  for(let i=0; i<4; i++){
+    const stripped = current.replace(QA.TR_SUFFIXES, "");
+    // Stop if nothing was stripped or result is too short to be a stem
+    if(stripped === current || stripped.length < 3) break;
+    if(knownStems.has(stripped)) return stripped;
+    current = stripped;
+  }
+
+  // No known stem found — return the original lowercase word so callers
+  // can still do exact-match lookup (will simply not match any dictionary key).
+  return w;
+}
+
+/**
+ * tokenize(text) → array of lowercase word tokens
+ * Splits on whitespace but preserves the original indices via a parallel
+ * array so we can later remove matched tokens from the original text.
+ */
+function qaTokenize(text){
+  const tokens = [];
+  // match word characters including Turkish letters
+  const re = /[\wçğışöüÇĞIİŞÖÜ]+/gi;
+  let m;
+  while((m = re.exec(text)) !== null){
+    tokens.push({ raw: m[0], lower: m[0].toLowerCase(), index: m.index });
+  }
+  return tokens;
+}
+
+// ── Core detection functions ─────────────────────────────────────────────────
+
+/**
+ * detectPriority(tokens) → { priority, consumed[] }
+ * consumed: array of token raw values that should be removed from task text.
+ */
+function detectPriority(tokens){
+  const lowers = tokens.map(t => t.lower);
+  for(const [level, words] of Object.entries(QA.PRIORITY)){
+    for(const kw of words){
+      // support multi-word keywords ("son tarih")
+      const kwTokens = kw.split(" ");
+      for(let i=0; i <= lowers.length - kwTokens.length; i++){
+        if(kwTokens.every((k,j) => lowers[i+j] === k)){
+          return {
+            priority: level,
+            consumed: tokens.slice(i, i+kwTokens.length).map(t=>t.raw),
+          };
+        }
+      }
     }
   }
+  return { priority: "Medium", consumed: [] };
 }
 
-  // Priority
-
-   const highPriorityWords = [
-  "urgent",
-  "important",
-  "asap",
-  "critical",
-  "acil",
-  "önemli",
-  "hemen",
-  "zorunlu",
-  "deadline",
-  "son tarih"
-];
-
-if(
-  highPriorityWords.some(word => lower.includes(word))
-){
-  priority = "High";
+/**
+ * detectCategory(tokens) → best matching category string
+ * Last-category-wins so more-specific overrides less-specific.
+ * Category keywords are NOT removed from task text (they're meaningful).
+ */
+function detectCategory(tokens){
+  const lowers = tokens.map(t => t.lower);
+  let result = "Personal";
+  for(const [cat, words] of Object.entries(QA.CATEGORY)){
+    if(cat === "Personal") continue; // skip fallback
+    for(const kw of words){
+      const kwTokens = kw.split(" ");
+      for(let i=0; i <= lowers.length - kwTokens.length; i++){
+        if(kwTokens.every((k,j) => lowers[i+j] === k)){
+          result = cat;
+        }
+      }
+    }
+  }
+  return result;
 }
-  
 
-  // Category
-  const shoppingWords = [
-  "buy",
-  "shop",
-  "market",
-  "al",
-  "alışveriş",
-  "sipariş",
-  "migros",
-  "a101",
-  "bim",
-  "şok",
-  "ekmek",
-  "süt"
-];
+/**
+ * detectDate(tokens, originalText) → { due: "YYYY-MM-DD"|"", consumed: [] }
+ *
+ * Detection order (first match wins):
+ *   1. today / bugün
+ *   2. tomorrow / yarın(a)
+ *   3. next week / haftaya
+ *   4. weekday names (EN + TR with suffix normalization)
+ *   5. "DD MonthName" or "MonthName DD" (EN + TR)
+ *
+ * Returns the matched date string and the raw token(s) to remove.
+ */
+function detectDate(tokens){
+  const consumed = [];
 
-if (
-  shoppingWords.some(word => lower.includes(word))
-){
-  category = "Shopping";
-}
- const learningWords = [
-  "study",
-  "homework",
-  "learn",
-  "course",
-  "lesson",
-  "lecture",
-  "project",
-  "exam",
-  "school",
-  "university",
-  "çalış",
-  "öğren",
-  "ders",
-  "ödev",
-  "sınav",
-  "okul",
-  "kurs",
-  "proje",
-  "yazılım",
-  "kodla"
-];
-
-if(
-  learningWords.some(word => lower.includes(word))
-){
-  category = "Learning";
-}
-    const healthWords = [
-  "gym",
-  "exercise",
-  "workout",
-  "doctor",
-  "hospital",
-  "medicine",
-  "walk",
-  "run",
-  "fitness",
-  "diet",
-  "spor",
-  "egzersiz",
-  "yürüyüş",
-  "koşu",
-  "hastane",
-  "doktor",
-  "ilaç",
-  "diyet",
-  "sağlık",
-  "judo"
-];
-
-if(
-  healthWords.some(word => lower.includes(word))
-){
-  category = "Health";
-}
-const workWords = [
-  "meeting",
-  "client",
-  "email",
-  "report",
-  "office",
-  "job",
-  "work",
-  "presentation",
-  "business",
-  "iş görüşmesi",
-  "iş",
-  "müşteri",
-  "toplantı",
-  "rapor",
-  "fatura",
-  "ofis",
-  "proje"
-];
-
-if(
-  workWords.some(word => lower.includes(word))
-){
-  category = "Work";
-}
-    
-  // Due date
-  if(lower.includes("tomorrow")){
-    const d = new Date();
-    d.setDate(d.getDate()+1);
-    due = d.toISOString().split("T")[0];
+  // Helper: find first token whose normalized form matches a dictionary key
+  function findToken(dict, normalize){
+    for(const tok of tokens){
+      const key = normalize ? normalizeTR(tok.lower) : tok.lower;
+      if(key in dict) return { tok, key };
+    }
+    return null;
   }
 
-  if(lower.includes("today")){
-    due = new Date().toISOString().split("T")[0];
+  // 1. today / bugün
+  for(const tok of tokens){
+    if(tok.lower === "today" || tok.lower === "bugün"){
+      return { due: qaRelDate(0), consumed: [tok.raw] };
+    }
   }
-    const monthMap = {
-  ocak:0,
-  şubat:1,
-  subat:1,
-  mart:2,
-  nisan:3,
-  mayıs:4,
-  mayis:4,
-  haziran:5,
-  temmuz:6,
-  ağustos:7,
-  agustos:7,
-  eylül:8,
-  eylul:8,
-  ekim:9,
-  kasım:10,
-  kasim:10,
-  aralık:11,
-  aralik:11
-};
 
-  // Temizlik
-    text = text.replace(/\d{1,2}\s+[a-zçğıöşü]+/gi, "");
-    
+  // 2. tomorrow / yarın (with optional TR suffix: yarına, yarınki…)
+  for(const tok of tokens){
+    if(tok.lower === "tomorrow"){
+      return { due: qaRelDate(1), consumed: [tok.raw] };
+    }
+    if(normalizeTR(tok.lower) === "yarın"){
+      return { due: qaRelDate(1), consumed: [tok.raw] };
+    }
+  }
 
-  text = text
-    .replace(/urgent/gi,"")
-    .replace(/tomorrow/gi,"")
-    .replace(/today/gi,"")
-    .trim();
+  // 3. next week (two-token phrase) / haftaya
+  for(let i=0; i < tokens.length-1; i++){
+    if(tokens[i].lower === "next" && tokens[i+1].lower === "week"){
+      return { due: qaRelDate(7), consumed: [tokens[i].raw, tokens[i+1].raw] };
+    }
+  }
+  for(const tok of tokens){
+    if(normalizeTR(tok.lower) === "hafta" || tok.lower === "haftaya" || tok.lower === "haftaye"){
+      return { due: qaRelDate(7), consumed: [tok.raw] };
+    }
+  }
 
-  // Alanları doldur
-  document.getElementById("taskInput").value = text;
-  document.getElementById("catSelect").value = category;
+  // 4. Weekday names
+  //    EN: exact match
+  const enDay = findToken(QA.EN_DAYS, false);
+  if(enDay){
+    return { due: qaNextWeekday(QA.EN_DAYS[enDay.key]), consumed: [enDay.tok.raw] };
+  }
+  //    TR: normalize suffix then look up
+  const trDay = findToken(QA.TR_DAYS, true);
+  if(trDay){
+    return { due: qaNextWeekday(QA.TR_DAYS[trDay.key]), consumed: [trDay.tok.raw] };
+  }
+
+  // 5. "DD MonthName" or "MonthName DD"  (EN + TR)
+  for(let i=0; i < tokens.length; i++){
+    const t = tokens[i];
+    const next = tokens[i+1];
+
+    // Try current token as a number (day)
+    const dayNum = parseInt(t.lower, 10);
+    if(!isNaN(dayNum) && dayNum >= 1 && dayNum <= 31 && next){
+      // next token is month name?
+      const enM = QA.EN_MONTHS[next.lower];
+      if(enM !== undefined){
+        return { due: qaMonthDate(enM, dayNum), consumed: [t.raw, next.raw] };
+      }
+      const trKey = normalizeTR(next.lower);
+      const trM = QA.TR_MONTHS[trKey];
+      if(trM !== undefined){
+        return { due: qaMonthDate(trM, dayNum), consumed: [t.raw, next.raw] };
+      }
+    }
+
+    // Try current token as a month name, next as day number
+    const enM = QA.EN_MONTHS[t.lower];
+    if(enM !== undefined && next){
+      const d = parseInt(next.lower, 10);
+      if(!isNaN(d) && d >= 1 && d <= 31){
+        return { due: qaMonthDate(enM, d), consumed: [t.raw, next.raw] };
+      }
+    }
+    const trKey = normalizeTR(t.lower);
+    const trM = QA.TR_MONTHS[trKey];
+    if(trM !== undefined && next){
+      const d = parseInt(next.lower, 10);
+      if(!isNaN(d) && d >= 1 && d <= 31){
+        return { due: qaMonthDate(trM, d), consumed: [t.raw, next.raw] };
+      }
+    }
+  }
+
+  return { due: "", consumed: [] };
+}
+
+/**
+ * qaMonthDate(monthIndex, day) → "YYYY-MM-DD"
+ * Uses current year; bumps to next year if the date has already passed.
+ */
+function qaMonthDate(monthIndex, day){
+  const now = new Date();
+  let year = now.getFullYear();
+  const candidate = new Date(year, monthIndex, day);
+  // If the date is in the past, assume next year
+  if(candidate < now) year++;
+  return qaFmt(new Date(year, monthIndex, day));
+}
+
+/**
+ * cleanTaskText(originalText, consumedRaws) → cleaned string
+ * Removes consumed tokens (case-insensitive, whole-word) and
+ * collapses extra whitespace.
+ */
+function cleanTaskText(text, consumedRaws){
+  let result = text;
+  for(const raw of consumedRaws){
+    // Escape regex special chars, then match as whole word
+    const escaped = raw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    result = result.replace(new RegExp(`\\b${escaped}\\b`, "gi"), "");
+  }
+  // Collapse multiple spaces and trim
+  return result.replace(/\s{2,}/g, " ").trim();
+}
+
+// ── Main entry point ─────────────────────────────────────────────────────────
+
+function parseQuickAdd(){
+  const input = document.getElementById("quickInput");
+  const rawText = input.value.trim();
+  if(!rawText) return;
+
+  // Tokenize once; all detectors share the same token array
+  const tokens = qaTokenize(rawText);
+
+  // Run each detector (pure functions — order independent)
+  const { priority, consumed: priConsumed }  = detectPriority(tokens);
+  const category                              = detectCategory(tokens);
+  const { due,      consumed: dateConsumed } = detectDate(tokens);
+
+  // Collect all tokens to strip from task text
+  const allConsumed = [...priConsumed, ...dateConsumed];
+
+  // Build clean task title
+  const cleanText = cleanTaskText(rawText, allConsumed);
+
+  // ── Fill form fields ───────────────────────────────────────────────────────
+  document.getElementById("taskInput").value  = cleanText;
+  document.getElementById("catSelect").value  = category;
   document.getElementById("prioSelect").value = priority;
-
-  if(due){
-    document.getElementById("dateInput").value = due;
-  }
+  if(due) document.getElementById("dateInput").value = due;
 
   input.value = "";
 }
 
 function formatDue(due){
   if(!due) return null;
-  const td = today();
-  if(due === td) return { label:'Today', color:'#D4900A', bg:'#FEF3DA', text:'#6B4300' };
-  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
-  const tmStr = tomorrow.toISOString().split('T')[0];
-  if(due === tmStr) return { label:'Tomorrow', color:'#378ADD', bg:'#E6F1FB', text:'#0C447C' };
-  if(due < td) {
-    const days = Math.round((new Date(td)-new Date(due))/(1000*60*60*24));
-    return { label:`${days}d overdue`, color:'#E24B4A', bg:'#FCEBEB', text:'#7C1111' };
+  const td=today();
+  if(due===td) return {label:'Today',color:'#D4900A',bg:'#FEF3DA',text:'#6B4300'};
+  const tomorrow=new Date(); tomorrow.setDate(tomorrow.getDate()+1);
+  const tmStr=tomorrow.toISOString().split('T')[0];
+  if(due===tmStr) return {label:'Tomorrow',color:'#378ADD',bg:'#E6F1FB',text:'#0C447C'};
+  if(due<td){
+    const days=Math.round((new Date(td)-new Date(due))/(1000*60*60*24));
+    return {label:`${days}d overdue`,color:'#E24B4A',bg:'#FCEBEB',text:'#7C1111'};
   }
-  const days = Math.round((new Date(due)-new Date(td))/(1000*60*60*24));
-  if(days <= 7) return { label:`In ${days} days`, color:'#1D9E75', bg:'#E1F5EE', text:'#085041' };
-  // format as readable date
-  const d = new Date(due+'T00:00:00');
-  const label = d.toLocaleDateString('en', {month:'short', day:'numeric'});
-  return { label, color:'#888', bg:'#f0f0f0', text:'#444' };
+  const days=Math.round((new Date(due)-new Date(td))/(1000*60*60*24));
+  if(days<=7) return {label:`In ${days} days`,color:'#1D9E75',bg:'#E1F5EE',text:'#085041'};
+  const d=new Date(due+'T00:00:00');
+  return {label:d.toLocaleDateString('en',{month:'short',day:'numeric'}),color:'#888',bg:'#f0f0f0',text:'#444'};
 }
 
 function addTask(){
@@ -394,9 +540,10 @@ function addTask(){
   const text=inp.value.trim(); if(!text) return;
   const cat=document.getElementById('catSelect').value;
   const prio=document.getElementById('prioSelect').value;
-  const due=document.getElementById('dateInput').value || null;
-  tasks.unshift({id:Date.now(), text, done:false, cat, prio, due});
-  save(); inp.value=''; render();
+  const due=document.getElementById('dateInput').value||null;
+  const now=Date.now();
+  tasks.unshift({id:now, createdAt:now, text, done:false, cat, prio, due});
+  save(); inp.value=''; document.getElementById('dateInput').value=''; render();
 }
 
 function toggle(id){ const t=tasks.find(t=>t.id===id); if(t){t.done=!t.done; save(); render();} }
@@ -404,6 +551,38 @@ function del(id){ tasks=tasks.filter(t=>t.id!==id); save(); render(); }
 function setStatus(s,el){ statusFilter=s; document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); render(); }
 function setCat(c){ catFilter=c; render(); }
 function setPrio(p){ prioFilter=p; render(); }
+
+function sortTasks(f){
+  return [...f].sort((a,b)=>{
+    // Always: active before done
+    if(a.done!==b.done) return a.done?1:-1;
+
+    // Among active tasks: overdue always first
+    if(!a.done && !b.done){
+      const aOver=isOverdue(a), bOver=isOverdue(b);
+      if(aOver!==bOver) return aOver?-1:1;
+    }
+
+    // Then apply selected sort mode
+    if(sortMode==='priority'){
+      return (PRIOS[a.prio]?.order||3)-(PRIOS[b.prio]?.order||3);
+    }
+    if(sortMode==='date'){
+      // no due date goes last
+      if(!a.due && !b.due) return 0;
+      if(!a.due) return 1;
+      if(!b.due) return -1;
+      return a.due < b.due ? -1 : a.due > b.due ? 1 : 0;
+    }
+    if(sortMode==='newest'){
+      return (b.createdAt||0)-(a.createdAt||0);
+    }
+    if(sortMode==='oldest'){
+      return (a.createdAt||0)-(b.createdAt||0);
+    }
+    return 0;
+  });
+}
 
 function render(){
   const usedCats=[...new Set(tasks.map(t=>t.cat))];
@@ -422,17 +601,11 @@ function render(){
   if(catFilter!=='all') f=f.filter(t=>t.cat===catFilter);
   if(prioFilter!=='all') f=f.filter(t=>t.prio===prioFilter);
 
-  f=[...f].sort((a,b)=>{
-    if(a.done!==b.done) return a.done?1:-1;
-    const aOver=isOverdue(a)?0:1, bOver=isOverdue(b)?0:1;
-    if(aOver!==bOver) return aOver-bOver;
-    return (PRIOS[a.prio]?.order||3)-(PRIOS[b.prio]?.order||3);
-  });
+  f=sortTasks(f);
 
   const list=document.getElementById('taskList');
-  if(!f.length){ list.innerHTML=`<div class="empty">😊 No tasks here!</div>`; return; }
-
-  list.innerHTML=f.map(t=>{
+  if(!f.length){ list.innerHTML=`<div class="empty">😊 No tasks here!</div>`; }
+  else list.innerHTML=f.map(t=>{
     const cat=CATS[t.cat]||CATS.Personal;
     const pr=PRIOS[t.prio]||PRIOS.Medium;
     const due=formatDue(t.due);
@@ -447,7 +620,7 @@ function render(){
         <div class="badges">
           <span class="badge" style="background:${cat.bg};color:${cat.text};">${cat.icon} ${t.cat}</span>
           <span class="badge" style="background:${pr.bg};color:${pr.text};">${pr.icon} ${t.prio}</span>
-          ${due ? `<span class="due-badge" style="background:${due.bg};color:${due.text};">📅 ${due.label}</span>` : ''}
+          ${due?`<span class="due-badge" style="background:${due.bg};color:${due.text};">📅 ${due.label}</span>`:''}
         </div>
       </div>
       <button class="del-btn" onclick="del(${t.id})">🗑</button>
@@ -461,13 +634,16 @@ function render(){
   document.getElementById('s-left').textContent=tasks.length-done;
   document.getElementById('s-overdue').textContent=overdue;
 }
-let sortMode = 'priority';
-  function setSort(mode){
-  sortMode = mode;
+
+// Sort dropdown listener
+document.getElementById('sortSelect').addEventListener('change', function(){
+  sortMode = this.value;
   render();
-}
-  
+});
+
 document.getElementById('taskInput').addEventListener('keydown',e=>{ if(e.key==='Enter') addTask(); });
+document.getElementById('quickInput').addEventListener('keydown',e=>{ if(e.key==='Enter') parseQuickAdd(); });
+
 load(); render();
 </script>
 </body>
